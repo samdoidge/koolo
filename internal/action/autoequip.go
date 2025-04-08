@@ -407,7 +407,7 @@ func equip(itm data.Item, bodyloc item.LocationType, target item.LocationType) e
 
 	utils.Sleep(500)
 	itemEquipped := false
-	for _, inPlace := range ctx.GameReader.GetData().Data.Inventory.ByLocation(item.LocationEquipped) {
+	for _, inPlace := range ctx.GameReader.GetData().Data.Inventory.ByLocation(target) {
 		if itm.UnitID == inPlace.UnitID && inPlace.Location.BodyLocation == bodyloc {
 			itemEquipped = true
 			break
