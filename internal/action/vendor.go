@@ -43,11 +43,12 @@ func VendorRefill(forceRefill, sellJunk bool) error {
 
 	SwitchStashTab(4)
 	ctx.RefreshGameData()
-	town.BuyConsumables(forceRefill)
 
 	if sellJunk {
 		town.SellJunk()
 	}
+
+	town.BuyConsumables(forceRefill)
 
 	return step.CloseAllMenus()
 }
