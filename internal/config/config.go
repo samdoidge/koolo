@@ -224,6 +224,7 @@ type CharacterCfg struct {
 		Leveling struct {
 			EnsurePointsAllocation bool `yaml:"ensurePointsAllocation"`
 			EnsureKeyBinding       bool `yaml:"ensureKeyBinding"`
+			AutoEquip              bool `yaml:"autoEquip"`
 		} `yaml:"leveling"`
 		Quests struct {
 			ClearDen       bool `yaml:"clearDen"`
