@@ -33,7 +33,7 @@ not aware of any ban for using it. I'm not responsible for any ban or any other 
 - CTA buff and class buffs
 - Auto repair
 - Skip on immune
-- Auto leveling sorceress and paladin (WIP) this feature is not finished.
+- Auto leveling sorceress and paladin (WIP). Requires selecting specific leveling classes like "Sorc (Leveling as Fire)".
 - Auto gambling
 - Auto cubing and crafting (WIP)
 - Terror Zones (WIP)
