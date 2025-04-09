@@ -237,29 +237,32 @@ func evaluateItems(items []data.Item, target item.LocationType, scoreFunc func(d
 				} else {
 					// Find best non-two-handed weapon score
 					var bestComboScore float64
+					foundOneHanded := false
 					for _, itm := range items {
 						if _, isTwoHanded := itm.FindStat(stat.TwoHandedMinDamage, 0); !isTwoHanded {
 							if score, exists := itemScores[itm.UnitID]["left_arm"]; exists {
 								ctx.Logger.Debug(fmt.Sprintf("Best one-handed weapon score: %.1f", score))
 								bestComboScore = score
+								foundOneHanded = true
 								break
 							}
 						}
 					}
-
-					// Add best shield score if available
-					if rightArmItems, ok := itemsByLoc[item.LocRightArm]; ok && len(rightArmItems) > 0 {
-						if score, exists := itemScores[rightArmItems[0].UnitID][item.LocRightArm]; exists {
-							ctx.Logger.Debug(fmt.Sprintf("Best shield score: %.1f", score))
-							bestComboScore += score
-							ctx.Logger.Debug(fmt.Sprintf("Best one-hand + shield combo score: %.1f", bestComboScore))
+					if foundOneHanded {
+						// Add best shield score if available
+						if rightArmItems, ok := itemsByLoc[item.LocRightArm]; ok && len(rightArmItems) > 0 {
+							if score, exists := itemScores[rightArmItems[0].UnitID][item.LocRightArm]; exists {
+								ctx.Logger.Debug(fmt.Sprintf("Best shield score: %.1f", score))
+								bestComboScore += score
+								ctx.Logger.Debug(fmt.Sprintf("Best one-hand + shield combo score: %.1f", bestComboScore))
+							}
 						}
-					}
 
-					// If one-hand + shield combo scores better, remove the two-handed weapon
-					if twoHandedScore, exists := itemScores[items[0].UnitID][item.LocLeftArm]; exists && bestComboScore >= twoHandedScore {
-						ctx.Logger.Debug(fmt.Sprintf("Removing two-handed weapon: %s", items[0].Name))
-						itemsByLoc[item.LocLeftArm] = itemsByLoc[item.LocLeftArm][1:]
+						// If one-hand + shield combo scores better, remove the two-handed weapon
+						if twoHandedScore, exists := itemScores[items[0].UnitID][item.LocLeftArm]; exists && bestComboScore >= twoHandedScore {
+							ctx.Logger.Debug(fmt.Sprintf("Removing two-handed weapon: %s", items[0].Name))
+							itemsByLoc[item.LocLeftArm] = itemsByLoc[item.LocLeftArm][1:]
+						}
 					}
 				}
 			}
