@@ -19,11 +19,14 @@ func (a Leveling) act1() error {
 
 	running = true
 
-	// Clear Den of Evil til level 3 - might need to run it in each difficulty if we need more than one respec
-	if lvl, _ := a.ctx.Data.PlayerUnit.FindStat(stat.Level, 0); lvl.Value < 3 {
-		a.ctx.Logger.Debug("Current lvl %s under 3 - Leveling in Den of Evil")
-		return NewQuests().clearDenQuest()
-	}
+	// Clear Den of Evil until quest is completed AND we're at least level 3
+    denCompleted := a.ctx.Data.Quests[quest.Act1DenOfEvil].Completed()
+    lvl, _ := a.ctx.Data.PlayerUnit.FindStat(stat.Level, 0)
+    if !denCompleted || lvl.Value < 3 {
+        a.ctx.Logger.Debug("Running Den of Evil (completed: %v, level: %d)", denCompleted, lvl.Value)
+        return NewQuests().clearDenQuest()
+    }
+
 	// Do Cold Plains til level 6
 	if lvl, _ := a.ctx.Data.PlayerUnit.FindStat(stat.Level, 0); lvl.Value < 6 {
 		return a.coldPlains()
