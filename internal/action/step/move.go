@@ -185,65 +185,57 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 	}
 }
 func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.Position) bool {
-	ctx := context.Get()
+    ctx := context.Get()
 
-	// Check for doors in the path
+    // Get current path to destination
+    path, _, found := ctx.PathFinder.GetPath(ctx.Data.PlayerUnit.Position, dest)
+    if !found {
+        return false
+    }
+
+	// Check doors first
 	for _, o := range ctx.Data.Objects {
-		if o.IsDoor() && o.Selectable &&
-			ctx.PathFinder.DistanceFromMe(o.Position) < 5 &&
-			openedDoors[o.Name] != o.Position {
+		if o.IsDoor() && o.Selectable && openedDoors[o.Name] != o.Position {
+			// Verify door is actually in the current path
+			for _, pathPos := range path {
+				if ctx.PathFinder.DistanceFromPoint(pathPos, o.Position) < 3 {
+					ctx.Logger.Debug("Door detected in path, opening...")
+					openedDoors[o.Name] = o.Position
 
-			// Check if door is between us and destination
-			doorPos := o.Position
-			ourPos := ctx.Data.PlayerUnit.Position
+					err := InteractObject(o, func() bool {
+						obj, found := ctx.Data.Objects.FindByID(o.ID)
+						return found && !obj.Selectable
+					})
 
-			// Calculate if door is roughly in our path to destination
-			dotProduct := (doorPos.X-ourPos.X)*(dest.X-ourPos.X) + (doorPos.Y-ourPos.Y)*(dest.Y-ourPos.Y)
+					if err == nil {
+						// Refresh path data after door interaction
+						ctx.PathFinder.RefreshMapData()
+						utils.Sleep(300) // Allow door animation
+						return true
+					}
+					break
+				}
+			}
+		}
+	}
 
-			lengthSquared := (dest.X-ourPos.X)*(dest.X-ourPos.X) + (dest.Y-ourPos.Y)*(dest.Y-ourPos.Y)
-
-			// If door is roughly in our direction of travel and close enough
-			if lengthSquared > 0 && dotProduct > 0 && dotProduct < lengthSquared {
-				ctx.Logger.Debug("Door detected in path, opening it...")
-				openedDoors[o.Name] = o.Position
-
-				err := InteractObject(o, func() bool {
-					obj, found := ctx.Data.Objects.FindByID(o.ID)
-					return found && !obj.Selectable
-				})
-
-				if err != nil {
-					ctx.Logger.Debug("Failed to open door", slog.String("error", err.Error()))
-				} else {
-					utils.Sleep(200)
+	// Check destructibles using path data
+	for _, o := range ctx.Data.Objects {
+		if o.Name == object.Barrel && ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
+			for _, pathPos := range path {
+				if ctx.PathFinder.DistanceFromPoint(pathPos, o.Position) < 2 {
+					ctx.Logger.Debug("Clearing path obstruction...")
+					InteractObject(o, func() bool {
+						x, y := ctx.PathFinder.GameCoordsToScreenCords(o.Position.X, o.Position.Y)
+						ctx.HID.Click(game.LeftButton, x, y)
+						return true
+					})
+					utils.Sleep(100)
 					return true
 				}
 			}
 		}
 	}
 
-	// Check for destructible objects like barrels
-	for _, o := range ctx.Data.Objects {
-		if o.Name == object.Barrel && ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
-			objPos := o.Position
-			ourPos := ctx.Data.PlayerUnit.Position
-
-			dotProduct := (objPos.X-ourPos.X)*(dest.X-ourPos.X) + (objPos.Y-ourPos.Y)*(dest.Y-ourPos.Y)
-			lengthSquared := (dest.X-ourPos.X)*(dest.X-ourPos.X) + (dest.Y-ourPos.Y)*(dest.Y-ourPos.Y)
-
-			if lengthSquared > 0 && dotProduct > 0 && dotProduct < lengthSquared {
-				ctx.Logger.Debug("Destructible object in path, destroying it...")
-				InteractObject(o, func() bool {
-					// Extra click to ensure destruction
-					x, y := ctx.PathFinder.GameCoordsToScreenCords(o.Position.X, o.Position.Y)
-					ctx.HID.Click(game.LeftButton, x, y)
-					return true
-				})
-
-				utils.Sleep(100)
-				return true
-			}
-		}
-	}
 	return false
 }
