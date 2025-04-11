@@ -196,7 +196,7 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 	for _, o := range ctx.Data.Objects {
 		if o.IsDoor() && o.Selectable && openedDoors[o.Name] != o.Position {
 			// Check if door is near any point in the path
-			for _, pathPos := range path {
+			for range path {
 				if ctx.PathFinder.DistanceFromMe(o.Position) < 5 {
 					ctx.Logger.Debug("Door detected near path, opening...")
 					openedDoors[o.Name] = o.Position
