@@ -18,16 +18,48 @@ func ClearAreaAroundPosition(pos data.Position, radius int, filter data.MonsterF
 	ctx := context.Get()
 	ctx.SetLastAction("ClearAreaAroundPosition")
 
-	return ctx.Char.KillMonsterSequence(func(d game.Data) (data.UnitID, bool) {
-		for _, m := range d.Monsters.Enemies(filter) {
-			distanceToTarget := pather.DistanceFromPoint(pos, m.Position)
-			if ctx.Data.AreaData.IsWalkable(m.Position) && distanceToTarget <= radius {
-				return m.UnitID, true
+	maxRetries := 3
+	retryCount := 0
+
+	for {
+		ctx.PauseIfNotPriority()
+
+		err := ctx.Char.KillMonsterSequence(func(d game.Data) (data.UnitID, bool) {
+			for _, m := range d.Monsters.Enemies(filter) {
+				dist := pather.DistanceFromPoint(pos, m.Position)
+				if ctx.Data.AreaData.IsWalkable(m.Position) && dist <= radius {
+					// Verify monster can actually take damage
+					if m.Stats[stat.Life] <= 0 || m.IsImmune() {
+						continue
+					}
+					return m.UnitID, true
+				}
 			}
+			return 0, false
+		}, nil)
+
+		if err != nil {
+			retryCount++
+			if retryCount > maxRetries {
+				ctx.Logger.Debug("Max retries reached, moving on")
+				return nil
+			}
+			continue
 		}
 
-		return 0, false
-	}, nil)
+		// Additional verification pass
+		found := false
+		for _, m := range ctx.Data.Monsters.Enemies(filter) {
+			if pather.DistanceFromPoint(pos, m.Position) <= radius {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil
+		}
+		retryCount = 0 // Reset counter if we found new targets
+	}
 }
 
 func ClearThroughPath(pos data.Position, radius int, filter data.MonsterFilter) error {
