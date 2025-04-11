@@ -187,18 +187,18 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.Position) bool {
     ctx := context.Get()
 
-    // Get current path to destination
-    path, _, found := ctx.PathFinder.GetPath(ctx.Data.PlayerUnit.Position, dest)
+    // Get current path to destination (single argument version)
+    path, _, found := ctx.PathFinder.GetPath(dest)
     if !found {
         return false
     }
 
-	// Check doors first
+    // Check doors first
 	for _, o := range ctx.Data.Objects {
 		if o.IsDoor() && o.Selectable && openedDoors[o.Name] != o.Position {
-			// Verify door is actually in the current path
+			// Verify door is near the path using DistanceFromMe
 			for _, pathPos := range path {
-				if ctx.PathFinder.DistanceFromPoint(pathPos, o.Position) < 3 {
+				if ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
 					ctx.Logger.Debug("Door detected in path, opening...")
 					openedDoors[o.Name] = o.Position
 
@@ -208,9 +208,9 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 					})
 
 					if err == nil {
-						// Refresh path data after door interaction
-						ctx.PathFinder.RefreshMapData()
-						utils.Sleep(300) // Allow door animation
+						// Force path recalculation by getting new path
+						ctx.PathFinder.GetPath(dest)
+						utils.Sleep(300)
 						return true
 					}
 					break
@@ -219,21 +219,17 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 		}
 	}
 
-	// Check destructibles using path data
+	// Check destructibles using player distance
 	for _, o := range ctx.Data.Objects {
 		if o.Name == object.Barrel && ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
-			for _, pathPos := range path {
-				if ctx.PathFinder.DistanceFromPoint(pathPos, o.Position) < 2 {
-					ctx.Logger.Debug("Clearing path obstruction...")
-					InteractObject(o, func() bool {
-						x, y := ctx.PathFinder.GameCoordsToScreenCords(o.Position.X, o.Position.Y)
-						ctx.HID.Click(game.LeftButton, x, y)
-						return true
-					})
-					utils.Sleep(100)
-					return true
-				}
-			}
+			ctx.Logger.Debug("Clearing path obstruction...")
+			InteractObject(o, func() bool {
+				x, y := ctx.PathFinder.GameCoordsToScreenCords(o.Position.X, o.Position.Y)
+				ctx.HID.Click(game.LeftButton, x, y)
+				return true
+			})
+			utils.Sleep(100)
+			return true
 		}
 	}
 
