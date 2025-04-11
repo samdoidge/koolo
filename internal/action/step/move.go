@@ -3,7 +3,6 @@ package step
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"time"
 
@@ -197,7 +196,7 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 	for _, o := range ctx.Data.Objects {
 		if o.IsDoor() && o.Selectable && openedDoors[o.Name] != o.Position {
 			// Verify door is near the path using DistanceFromMe
-			for _, pathPos := range path {
+			for _ := range path {
 				if ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
 					ctx.Logger.Debug("Door detected in path, opening...")
 					openedDoors[o.Name] = o.Position
