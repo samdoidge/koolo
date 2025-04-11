@@ -185,20 +185,20 @@ func MoveTo(dest data.Position, options ...MoveOption) error {
 }
 func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.Position) bool {
     ctx := context.Get()
-
-    // Get current path to destination (single argument version)
+    
+    // Get current path to destination
     path, _, found := ctx.PathFinder.GetPath(dest)
     if !found {
         return false
     }
 
-    // Check doors first
+	// Check doors first using path coordinates
 	for _, o := range ctx.Data.Objects {
 		if o.IsDoor() && o.Selectable && openedDoors[o.Name] != o.Position {
-			// Verify door is near the path using DistanceFromMe
-			for _ := range path {
-				if ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
-					ctx.Logger.Debug("Door detected in path, opening...")
+			// Check if door is near any point in the path
+			for _, pathPos := range path {
+				if ctx.PathFinder.DistanceFromMe(o.Position) < 5 {
+					ctx.Logger.Debug("Door detected near path, opening...")
 					openedDoors[o.Name] = o.Position
 
 					err := InteractObject(o, func() bool {
@@ -207,7 +207,7 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 					})
 
 					if err == nil {
-						// Force path recalculation by getting new path
+						// Force path refresh by recalculating
 						ctx.PathFinder.GetPath(dest)
 						utils.Sleep(300)
 						return true
@@ -218,10 +218,10 @@ func handleObstaclesInPath(dest data.Position, openedDoors map[object.Name]data.
 		}
 	}
 
-	// Check destructibles using player distance
+	// Check destructibles using player proximity
 	for _, o := range ctx.Data.Objects {
 		if o.Name == object.Barrel && ctx.PathFinder.DistanceFromMe(o.Position) < 3 {
-			ctx.Logger.Debug("Clearing path obstruction...")
+			ctx.Logger.Debug("Clearing nearby obstruction...")
 			InteractObject(o, func() bool {
 				x, y := ctx.PathFinder.GameCoordsToScreenCords(o.Position.X, o.Position.Y)
 				ctx.HID.Click(game.LeftButton, x, y)
