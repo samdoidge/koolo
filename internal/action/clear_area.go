@@ -28,10 +28,6 @@ func ClearAreaAroundPosition(pos data.Position, radius int, filter data.MonsterF
 			for _, m := range d.Monsters.Enemies(filter) {
 				dist := pather.DistanceFromPoint(pos, m.Position)
 				if ctx.Data.AreaData.IsWalkable(m.Position) && dist <= radius {
-					// Verify monster can actually take damage
-					if m.Stats[stat.Life] <= 0 || m.IsImmune() {
-						continue
-					}
 					return m.UnitID, true
 				}
 			}
